@@ -187,7 +187,9 @@ namespace CognitiveVR
             Initialize();
         }
 #endif
-
+#if CVR_TESLASUIT
+    TeslasuitAPI.SuitAPIObject teslasuit;
+#endif
 
         /// <summary>
         /// Start recording a session. Sets SceneId, records basic hardware information, starts coroutines to record other data points on intervals
@@ -325,7 +327,46 @@ namespace CognitiveVR
                 gliaBehaviour.OnCognitiveLoad.AddListener(RecordCognitiveLoad);
             }
 #endif
+
+#if CVR_TESLASUIT
+            var suits = FindObjectsOfType<TeslasuitAPI.SuitAPIObject>();
+            if (suits.Length > 1) { Debug.LogWarning("only support 1 tesla suit currently"); return; }
+            if (suits.Length == 0) { Debug.LogWarning("no teslasuit api objects found in scene"); return; }
+            teslasuit = suits[0];
+#endif
         }
+
+#if CVR_TESLASUIT
+        private void Suit_BecameAvailable(TeslasuitAPI.SuitHandleObject obj)
+        {
+            teslasuit.Biometry.StartECG();
+            teslasuit.Biometry.StartGSR();
+            teslasuit.Biometry.GSRUpdated += Biometry_GSRUpdated;
+            teslasuit.Biometry.ECGUpdated += Biometry_ECGUpdated;
+            Core.SetParticipantProperty("Teslasuit Serial Number",teslasuit.Suit.SuitInfo.SuitSerialNumber);
+            Core.SetParticipantProperty("Teslasuit Sex", teslasuit.Suit.SuitInfo.SuitSex.ToString());
+            Core.SetParticipantProperty("Teslasuit SuitSize", teslasuit.Suit.SuitInfo.SuitSize.ToString());
+            Core.SetParticipantProperty("Teslasuit SuitKit", teslasuit.Suit.SuitInfo.SuitKit.ToString());
+        }
+        private void Biometry_ECGUpdated(ref TeslasuitAPI.ECGBuffer_MV ECGBuffer, System.IntPtr opaque, TeslasuitAPI.ResultCode resultCode)
+        {
+            for (int i = 0; i < ECGBuffer.data.Length; i++)
+            {
+                SensorRecorder.RecordDataPoint("Teslasuit.ECG", ECGBuffer.data[i].mv);
+            }
+        }
+
+        private void Biometry_GSRUpdated(ref TeslasuitAPI.GSRBuffer GSRBuffer, System.IntPtr opaque, TeslasuitAPI.ResultCode resultCode)
+        {
+            for (int i = 0; i < GSRBuffer.data.Length; i++)
+            {
+                for (int j = 0; j < GSRBuffer.data[i].data.Length; j++)
+                {
+                    SensorRecorder.RecordDataPoint("Teslasuit.GSR."+i+"."+j, GSRBuffer.data[i].data[j]);
+                }
+            }
+        }
+#endif
 
 #if CVR_OMNICEPT
         double pupillometryTimestamp;
@@ -770,6 +811,13 @@ namespace CognitiveVR
             if (!Application.isPlaying) { return; }
 
             Core.InvokeQuitEvent();
+
+#if CVR_TESLASUIT
+            teslasuit.Biometry.StopECG();
+            teslasuit.Biometry.StopGSR();
+            teslasuit.Biometry.GSRUpdated -= Biometry_GSRUpdated;
+            teslasuit.Biometry.ECGUpdated -= Biometry_ECGUpdated;
+#endif
 
             if (Core.IsInitialized)
             {
