@@ -13,7 +13,7 @@ namespace Innoactive.CreatorEditor.UI.Behaviors
         /// <inheritdoc />
         public override IBehavior GetNewItem()
         {
-            return new PlayCustomEventBehavior("Record Event", "New Event","",BehaviorExecutionStages.Deactivation);
+            return new RecordCustomEventBehavior("Record Event", "New Event","",BehaviorExecutionStages.Deactivation);
         }
     }
 }

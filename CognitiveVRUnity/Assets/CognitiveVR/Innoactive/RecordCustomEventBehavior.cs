@@ -11,13 +11,13 @@ using Innoactive.Creator.Core.SceneObjects;
 namespace Innoactive.Creator.Core.Behaviors
 {
     /// <summary>
-    /// A behavior that plays audio.
+    /// A behavior that records an event to Cogntive3D
     /// </summary>
     [DataContract(IsReference = true)]
-    public class PlayCustomEventBehavior : Behavior<PlayCustomEventBehavior.EntityData>
+    public class RecordCustomEventBehavior : Behavior<RecordCustomEventBehavior.EntityData>
     {
         /// <summary>
-        /// The "play audio" behavior's data.
+        /// The record event behavior's data.
         /// </summary>
         [DisplayName("Cognitive3D Event")]
         [DataContract(IsReference = true)]
@@ -28,9 +28,6 @@ namespace Innoactive.Creator.Core.Behaviors
 
             /// <inheritdoc />
             public string Name { get; set; }
-
-            //[DataMember]
-            //public string CustomEventName { get; set; }
 
             [DataMember]
             [DisplayName("Event Name")]
@@ -43,21 +40,12 @@ namespace Innoactive.Creator.Core.Behaviors
             [DataMember]
             [DisplayName("Execution stages")]
             public BehaviorExecutionStages ExecutionStages { get; set; }
-
-            //public bool HasSentMessage = false;
-
-
-
-            //CONSIDER how could dynamic properties be included here?
-
-            //CONSIDER start event at beginning. send event when step complete?
-            //will this be calculated automatically from objectives?
         }
 
-        private class PlayCustomEventProcess : InstantProcess<EntityData>
+        private class RecordCustomEventProcess : InstantProcess<EntityData>
         {
             private readonly BehaviorExecutionStages executionStages;
-            public PlayCustomEventProcess(BehaviorExecutionStages executionStages, EntityData data) : base(data)
+            public RecordCustomEventProcess(BehaviorExecutionStages executionStages, EntityData data) : base(data)
             {
                 this.executionStages = executionStages;
             }
@@ -74,7 +62,6 @@ namespace Innoactive.Creator.Core.Behaviors
 
             void SendEvent()
             {
-                Debug.Log("c3d send event " + Data.EventName);
                 Vector3 eventPosition = CognitiveVR.GameplayReferences.HMD.position;
 
                 string dynamicId = "";
@@ -96,16 +83,16 @@ namespace Innoactive.Creator.Core.Behaviors
             }
         }
 
-        protected PlayCustomEventBehavior() : this("Record Event","New Event", "", BehaviorExecutionStages.Deactivation)
+        protected RecordCustomEventBehavior() : this("Record Event","New Event", "", BehaviorExecutionStages.Deactivation)
         {
         }
 
-        public PlayCustomEventBehavior(string name, string eventName, ISceneObject targetObject, BehaviorExecutionStages executionStages) : this(name, eventName, TrainingReferenceUtils.GetNameFrom(targetObject),executionStages)
+        public RecordCustomEventBehavior(string name, string eventName, ISceneObject targetObject, BehaviorExecutionStages executionStages) : this(name, eventName, TrainingReferenceUtils.GetNameFrom(targetObject),executionStages)
         {
             
         }
 
-        public PlayCustomEventBehavior(string name, string eventName, string targetObject, BehaviorExecutionStages executionStages)
+        public RecordCustomEventBehavior(string name, string eventName, string targetObject, BehaviorExecutionStages executionStages)
         {
             Data.Target = new SceneObjectReference(targetObject);
             Data.EventName = eventName;
@@ -116,12 +103,12 @@ namespace Innoactive.Creator.Core.Behaviors
         /// <inheritdoc />
         public override IProcess GetActivatingProcess()
         {
-            return new PlayCustomEventProcess(BehaviorExecutionStages.Activation, Data);
+            return new RecordCustomEventProcess(BehaviorExecutionStages.Activation, Data);
         }
 
         public override IProcess GetDeactivatingProcess()
         {
-            return new PlayCustomEventProcess(BehaviorExecutionStages.Deactivation, Data);
+            return new RecordCustomEventProcess(BehaviorExecutionStages.Deactivation, Data);
         }
     }
 }
