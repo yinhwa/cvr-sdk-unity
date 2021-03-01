@@ -101,6 +101,7 @@ namespace CognitiveVR
 
         public int GazeLayerMask = -1;
         public int DynamicLayerMask = -1;
+        public QueryTriggerInteraction TriggerInteraction = QueryTriggerInteraction.Ignore;
 
         [Header("Send Data")]
         //min batch size
@@ -144,7 +145,7 @@ namespace CognitiveVR
         public KeyCode SendDataHotkey = KeyCode.F9;
 
         //defualt 10MB cache size
-        public long LocalDataCacheSize = 1024 * 1024 * 10;
+        public long LocalDataCacheSize = 1024 * 1024 * 100;
         public bool LocalStorage = true;
 
         public int TextureResize = 1;

@@ -74,6 +74,14 @@ namespace CognitiveVR
             else
                 Debug.LogError("Pupil Labs GazeController is null!");
 #endif
+#if CVR_OMNICEPT
+            if (gb == null)
+            {
+                gb = GameObject.FindObjectOfType<HP.Omnicept.Unity.GliaBehaviour>();
+                if (gb != null)
+                    gb.OnEyeTracking.AddListener(DoEyeTracking);
+            }
+#endif
             GazeCore.SetHMDType(hmdname);
             cameraRoot = GameplayReferences.HMD.root;
         }
@@ -92,7 +100,7 @@ namespace CognitiveVR
                 headsetPresent = false;
                 if (CognitiveVR_Preferences.Instance.SendDataOnHMDRemove)
                 {
-                    Core.InvokeSendDataEvent();
+                    Core.InvokeSendDataEvent(false);
                 }
             }
         }
@@ -108,7 +116,7 @@ namespace CognitiveVR
                 headsetPresent = false;
                 if (CognitiveVR_Preferences.Instance.SendDataOnHMDRemove)
                 {
-                    Core.InvokeSendDataEvent();
+                    Core.InvokeSendDataEvent(false);
                 }
             }
         }
@@ -125,7 +133,7 @@ namespace CognitiveVR
             headsetPresent = false;
             if (CognitiveVR_Preferences.Instance.SendDataOnHMDRemove)
             {
-                Core.InvokeSendDataEvent();
+                Core.InvokeSendDataEvent(false);
             }
         }
 #endif
@@ -151,7 +159,7 @@ namespace CognitiveVR
             localHitPoint = Vector3.zero;
             hitTextureCoord = Vector2.zero;
 
-            if (Physics.Raycast(pos, direction, out hit, distance, CognitiveVR_Preferences.Instance.DynamicLayerMask, QueryTriggerInteraction.Ignore))
+            if (Physics.Raycast(pos, direction, out hit, distance, CognitiveVR_Preferences.Instance.DynamicLayerMask, CognitiveVR_Preferences.Instance.TriggerInteraction))
             {
                 if (CognitiveVR_Preferences.S_DynamicObjectSearchInParent)
                 {
@@ -167,26 +175,12 @@ namespace CognitiveVR
                     didhitdynamic = true;
                     worldHitPoint = hit.point;
 
-                    Vector3 LocalGaze = hitDynamic.transform.InverseTransformPointUnscaled(worldHitPoint);
-                    float relativeScalex = hitDynamic.transform.lossyScale.x / hitDynamic.StartingScale.x;
-                    float relativeScaley = hitDynamic.transform.lossyScale.y / hitDynamic.StartingScale.y;
-                    float relativeScalez = hitDynamic.transform.lossyScale.z / hitDynamic.StartingScale.z;
-
-                    localHitPoint.x = LocalGaze.x / relativeScalex;
-                    localHitPoint.y = LocalGaze.y / relativeScaley;
-                    localHitPoint.z = LocalGaze.z / relativeScalez;
-
-                    //Vector3 relativeScale = new Vector3(
-                    //    hitDynamic.transform.lossyScale.x / hitDynamic.StartingScale.x,
-                    //    hitDynamic.transform.lossyScale.y / hitDynamic.StartingScale.y,
-                    //    hitDynamic.transform.lossyScale.z / hitDynamic.StartingScale.z);
-                    //localHitPoint = new Vector3(LocalGaze.x / relativeScale.x, LocalGaze.y / relativeScale.y, LocalGaze.z / relativeScale.z);
-
+                    localHitPoint = hitDynamic.transform.InverseTransformPoint(worldHitPoint);
                     hitDistance = hit.distance;
                     hitTextureCoord = hit.textureCoord;
                 }
             }
-            if (!didhitdynamic && Physics.SphereCast(pos, radius, direction, out hit, distance, CognitiveVR_Preferences.Instance.DynamicLayerMask, QueryTriggerInteraction.Ignore))
+            if (!didhitdynamic && Physics.SphereCast(pos, radius, direction, out hit, distance, CognitiveVR_Preferences.Instance.DynamicLayerMask, CognitiveVR_Preferences.Instance.TriggerInteraction))
             {
                 if (CognitiveVR_Preferences.Instance.DynamicObjectSearchInParent)
                 {
@@ -202,20 +196,7 @@ namespace CognitiveVR
                     didhitdynamic = true;
                     worldHitPoint = hit.point;
 
-                    Vector3 LocalGaze = hitDynamic.transform.InverseTransformPointUnscaled(worldHitPoint);
-                    float relativeScalex = hitDynamic.transform.lossyScale.x / hitDynamic.StartingScale.x;
-                    float relativeScaley = hitDynamic.transform.lossyScale.y / hitDynamic.StartingScale.y;
-                    float relativeScalez = hitDynamic.transform.lossyScale.z / hitDynamic.StartingScale.z;
-
-                    localHitPoint.x = LocalGaze.x / relativeScalex;
-                    localHitPoint.y = LocalGaze.y / relativeScaley;
-                    localHitPoint.z = LocalGaze.z / relativeScalez;
-
-                    //Vector3 relativeScale = new Vector3(
-                    //    hitDynamic.transform.lossyScale.x / hitDynamic.StartingScale.x,
-                    //    hitDynamic.transform.lossyScale.y / hitDynamic.StartingScale.y,
-                    //    hitDynamic.transform.lossyScale.z / hitDynamic.StartingScale.z);
-                    //localHitPoint = new Vector3(LocalGaze.x / relativeScale.x, LocalGaze.y / relativeScale.y, LocalGaze.z / relativeScale.z);
+                    localHitPoint = hitDynamic.transform.InverseTransformPoint(worldHitPoint);
                     hitDistance = hit.distance;
                     hitTextureCoord = hit.textureCoord;
                 }
@@ -261,6 +242,18 @@ namespace CognitiveVR
             gazeController.OnReceive3dGaze -= ReceiveEyeData;
         }
 #endif
+#if CVR_OMNICEPT
+        static Vector3 lastDirection = Vector3.forward;
+        static HP.Omnicept.Unity.GliaBehaviour gb;
+
+        static void DoEyeTracking(HP.Omnicept.Messaging.Messages.EyeTracking data)
+        {
+            if (data.CombinedGaze.Confidence > 0.5f)
+            {
+                lastDirection = GameplayReferences.HMD.TransformDirection(new Vector3(-data.CombinedGaze.X, data.CombinedGaze.Y, data.CombinedGaze.Z));
+            }
+        }
+#endif
 
         /// <summary>
         /// get the raw gaze direction in world space. includes fove/pupil labs eye tracking
@@ -282,6 +275,7 @@ namespace CognitiveVR
             }    
 #elif CVR_VIVEPROEYE
             var ray = new Ray();
+            //improvement? - if using callback, listen and use last valid data instead of calling SRanipal_Eye_API.GetEyeData
             if (ViveSR.anipal.Eye.SRanipal_Eye.GetGazeRay(ViveSR.anipal.Eye.GazeIndex.COMBINE, out ray))
             {
                 gazeDirection = GameplayReferences.HMD.TransformDirection(ray.direction);
@@ -302,6 +296,8 @@ namespace CognitiveVR
             gazeDirection = ah_calibrator.GetGazeVector(filterType: FilterType.ExponentialMovingAverage);
 #elif CVR_SNAPDRAGON
             gazeDirection = SvrManager.Instance.leftCamera.transform.TransformDirection(SvrManager.Instance.EyeDirection);
+#elif CVR_OMNICEPT
+            gazeDirection = lastDirection;
 #elif CVR_XR
             UnityEngine.XR.Eyes eyes;
             if (UnityEngine.XR.InputDevices.GetDeviceAtXRNode(UnityEngine.XR.XRNode.CenterEye).TryGetFeatureValue(UnityEngine.XR.CommonUsages.eyesData, out eyes))
@@ -329,7 +325,7 @@ namespace CognitiveVR
         /// </summary>
         public Vector3 GetViewportGazePoint()
         {
-            Vector2 screenGazePoint = Vector2.one * 0.5f;
+            Vector2 screenGazePoint = new Vector2(0.5f,0.5f);
 
 #if CVR_FOVE //screenpoint
 
